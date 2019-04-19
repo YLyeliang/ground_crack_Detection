@@ -5,6 +5,13 @@ import tensorflow as tf
 import numpy as np
 sess =tf.Session()
 H,W =5,10
+
+a = tf.range(100)
+a =tf.reshape(a,[4,25])
+b,c,d,e =tf.unstack(a,4,axis=0)
+
+
+f= tf.stack([b,c,d,e],axis=1)
 # a=tf.range(100)
 # a=tf.reshape(a,[1,2,2,25])
 # centers,sizes,conf,prob =tf.split(a,[2,2,1,20],axis=-1)
