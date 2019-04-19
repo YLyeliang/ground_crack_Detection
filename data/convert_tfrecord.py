@@ -36,7 +36,7 @@ def main(argv):
 
             example = tf.train.Example(features=tf.train.Features(
                 feature={
-                    'image':tf.train.Feature(bytes_list=tf.train.BytesList(value =[image])),
+                    'image':tf.train.Feature(bytes_list=tf.train.BytesList(value=[image])),
                     'boxes':tf.train.Feature(bytes_list=tf.train.BytesList(value=[boxes])),
                 }
             ))

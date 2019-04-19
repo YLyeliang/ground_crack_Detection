@@ -3,11 +3,20 @@
 #
 import tensorflow as tf
 import numpy as np
+
 sess =tf.Session()
 H,W =5,10
 
-a = tf.range(100)
-a =tf.reshape(a,[4,25])
+a=np.arange(10).reshape([5,1,2])
+argmax = np.argmax(a,axis=-1)
+wh=np.expand_dims(a,axis=-2)
+boxes_max = wh / 2.
+boxes_min = -boxes_max
+anchor_mask = [[6, 7, 8], [3, 4, 5], [0, 1, 2]]
+b= anchor_mask[1].index(3)
+
+a = tf.range(10)
+a =tf.reshape(a,[5,2])
 b,c,d,e =tf.unstack(a,4,axis=0)
 
 
