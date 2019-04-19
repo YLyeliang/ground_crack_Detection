@@ -130,6 +130,7 @@ class Parser(object):
         best_anchor = np.argmax(iou, axis=-1)
 
 
+
 class dataset(object):
     def __init__(self, parser, tfrecords_path, batch_size, shuffle=None, repeat=True):
         self.parser = parser
