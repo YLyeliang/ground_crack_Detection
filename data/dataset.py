@@ -162,8 +162,6 @@ class Parser(object):
         return self.preprocess(image,gt_boxes)
 
 
-
-
 class dataset(object):
     def __init__(self, parser, tfrecords_path, batch_size, shuffle=None, repeat=True):
         self.parser = parser
