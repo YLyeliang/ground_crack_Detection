@@ -8,8 +8,8 @@ import os
 
 def main(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset_txt", default='../data/train.txt')
-    parser.add_argument("--tfrecord_path_prefix", default='/home/yel/data/Aerialgoaf/train')
+    parser.add_argument("--dataset_txt", default='../data/test.txt')
+    parser.add_argument("--tfrecord_path_prefix", default='/home/yel/data/Aerialgoaf/test')
     flags = parser.parse_args()
 
     dataset ={}
@@ -27,7 +27,7 @@ def main(argv):
     images_num = len(image_paths)
     print(">> Processing %d images" %images_num)
 
-    tfrecord_file = flags.tfrecord_path_prefix +".tfrecods"
+    tfrecord_file = flags.tfrecord_path_prefix +".tfrecords"
     with tf.python_io.TFRecordWriter(tfrecord_file) as record_writer:
         for i in range(images_num):
             image = tf.gfile.FastGFile(image_paths[i],'rb').read()

@@ -1,6 +1,6 @@
 import tensorflow as tf
 from utility import common
-
+from utility import utils
 slim = tf.contrib.slim
 
 
@@ -71,7 +71,7 @@ class yolov3(object):
     def detection_layer(self, inputs, anchors):
         """Get the final score map"""
         num_anchors = len(anchors)
-        feature_map = slim.conv2d(inputs, num_anchors * (5 + self.NUM_CLASSES), 1, strides=1,
+        feature_map = slim.conv2d(inputs, num_anchors * (5 + self.NUM_CLASSES), 1, stride=1,
                                   normalizer_fn=None, activation_fn=None, biases_initializer=tf.zeros_initializer())
         return feature_map
 
@@ -82,7 +82,7 @@ class yolov3(object):
         inputs = tf.identity(inputs, name='upsampled')
         return inputs
 
-    def inference(self, inputs, is_training=False, reuse=False):
+    def inference(self, inputs, is_training=False):
         """
         Inference of yolo v3.
         :param inputs: a 4-D tensor of size[N,H,W,C]
@@ -100,7 +100,7 @@ class yolov3(object):
             'fused': None,
         }
         # Set activation and bn and initializer.
-        with slim.arg_scope([slim.conv2d, slim.batch_norm, common.conv2d], reuse=reuse):
+        with slim.arg_scope([slim.conv2d, slim.batch_norm, common.conv2d]):
             with slim.arg_scope([slim.conv2d], normalizer_fn=slim.batch_norm, normalizer_params=batch_norm_params,
                                 biases_initializer=None,
                                 activation_fn=lambda x: tf.nn.leaky_relu(x, alpha=self.LEAKY_RELU)):
@@ -131,13 +131,18 @@ class yolov3(object):
             return feature_map_1, feature_map_2, feature_map_3
 
     def reorg_layer(self, feature_map, anchors):
-        """reorganize feature map from final layers"""
+        """reorganize feature map from final layers
+        :return
+        x_y_offset: a meshgrid of offset corresponding to final grid.
+        boxes: [N,H,W,num_anchors,4(x_centers,y_centers,w,h)]
+
+        """
         num_anchors = len(anchors)  # num_anchors=3
         grid_size = feature_map.shape.as_list()[1:3]
         # the downscale image in height and weight
         stride = tf.cast(self.img_size // grid_size, tf.float32)  # [h,w] -> [y,x]
         feature_map = tf.reshape(feature_map, [-1, grid_size[0], grid_size[1], num_anchors,
-                                               5 + self.NUM_CLASSES])  # shape:[N,grid_H,W,num_anchors,5+classes]
+                                               5 + self.NUM_CLASSES])       # shape:[N,grid_H,W,num_anchors,5+classes]
 
         box_centers, box_sizes, conf_logits, prob_logits = tf.split(feature_map, [2, 2, 1, self.NUM_CLASSES],
                                                                     axis=-1)  # e.m.box_centers [N,H,W,num_anchors,2]
@@ -152,6 +157,7 @@ class yolov3(object):
         y_offset = tf.reshape(b, (-1, 1))  # shape(h*w,)
         x_y_offset = tf.concat([x_offset, y_offset], axis=-1)  # shape(h*w,2)
         x_y_offset = tf.reshape(x_y_offset, [grid_size[0], grid_size[1], 1, 2])  # (h,w,1,2)
+        x_y_offset = tf.cast(x_y_offset,tf.float32)
 
         box_centers = box_centers + x_y_offset  # predicted centers + the grid offset
         box_centers = box_centers * stride[::-1]  # rescale to original scale
@@ -172,9 +178,11 @@ class yolov3(object):
         """
         Note: compute the receptive field and get boxes,confs and class_probs
         given feature_maps
-        feature_maps -> [None, 13, 13, 255],
+        feature_maps -> [None, 13, 13, 3*(4+1+num_class)],
                         [None, 26, 26, 255],
                         [None, 52, 52, 255],
+        :return
+        boxes [N,/sigma(3*grid_w*h),4]
         """
         feature_map_1, feature_map_2, feature_map_3 = feature_maps
         feature_maps_anchors = [(feature_map_1, self.ANCHORS[6:9]),
@@ -185,7 +193,7 @@ class yolov3(object):
         boxes_list, confs_list, probs_list = [], [], []
 
         for result in results:
-            boxes, conf_logits, prob_logits = self.reshape(*result)  # flatten feature map
+            boxes, conf_logits, prob_logits = self.reshape(*result)  # flatten feature map i.e boxes(N,3*grid_w*h,4)
 
             confs = tf.sigmoid(conf_logits)
             probs = tf.sigmoid(prob_logits)
@@ -194,7 +202,7 @@ class yolov3(object):
             confs_list.append(confs)
             probs_list.append(probs)
 
-        boxes = tf.concat(boxes_list, axis=1)
+        boxes = tf.concat(boxes_list, axis=1)  # shape : [N,/sigma(3*grid_w*h),4]
         confs = tf.concat(confs_list, axis=1)
         probs = tf.concat(probs_list, axis=1)
 
@@ -204,7 +212,7 @@ class yolov3(object):
         x1 = center_x + width / 2.
         y1 = center_y + height / 2.
 
-        boxes = tf.concat([x0, y0, x1, y1], axis=1)
+        boxes = tf.concat([x0, y0, x1, y1], axis=-1)
         return boxes, confs, probs
 
     def comput_loss(self, y_pred, y_true, ignore_thresh=0.5, max_box_per_image=8):
@@ -340,7 +348,10 @@ class yolov3(object):
 
         return iou
 
-
-b = tf.placeholder(dtype=tf.float32, shape=(1, 512, 512, 3))
-dark = darknet53(b)
-c = 1
+# ANCHORS = utils.get_anchors('../data/anchors.txt',416,416)
+# images = tf.placeholder(dtype=tf.float32, shape=(1, 416, 416, 3))
+# model=yolov3(1,ANCHORS)
+# pred_feature_map = model.inference(images, is_training=tf.placeholder(tf.bool))
+# # loss = model.comput_loss(pred_feature_map, y_true)
+# y_pred = model.predict(pred_feature_map)
+# c = 1
