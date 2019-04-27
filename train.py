@@ -6,7 +6,7 @@ from data.dataset import dataset,Parser
 sess=tf.Session()
 
 IMAGE_H, IMAGE_W = 416,416
-BATCH_SIZE =8
+BATCH_SIZE =4
 STEPS = 30000
 LR = 0.0001
 DECAY_STEP = 1000
@@ -24,10 +24,31 @@ test_tfrecord = "/home/yel/data/Aerialgoaf/test.tfrecords"
 
 parser = Parser(IMAGE_H, IMAGE_W, ANCHORS, NUM_CLASSES)
 trainset = dataset(parser, train_rfrecord, BATCH_SIZE, shuffle=SHUFFLE_SIZE)
-testset = dataset(parser, test_tfrecord, BATCH_SIZE, shuffle=None)
+testset = dataset(parser, test_tfrecord, 1, shuffle=None,repeat=False)
 
 is_training = tf.placeholder(tf.bool)
 example = tf.cond(is_training, lambda: trainset.get_next(), lambda: testset.get_next())
+
+def test():
+    images, *y_true = example
+    model = yolov3.yolov3(NUM_CLASSES, ANCHORS)
+    with tf.variable_scope("yolov3"):
+        pred_feature_map = model.inference(images, is_training=is_training)
+        loss = model.comput_loss(pred_feature_map, y_true)
+        y_pred = model.predict(pred_feature_map)
+
+
+    # sess.run([tf.global_variables_initializer(), tf.local_variables_initializer()])
+    saver = tf.train.Saver()
+    saver.restore(sess,save_path="/home/yel/PycharmProjects/lab/model.ckpt-21000")
+
+    num = sum(1 for _ in tf.python_io.tf_record_iterator(test_tfrecord))
+    for i in range(num):
+        run_items = sess.run([ y_pred, y_true] + loss, feed_dict={is_training: False})
+
+        test_rec_value, test_prec_value = utils.evaluate(run_items[0], run_items[1])
+        print(
+              "=>[TEST]:\trecall:%7.4f \tprecision:%7.4f" % (test_rec_value, test_prec_value))
 
 def training():
     images, *y_true = example
@@ -64,12 +85,16 @@ def training():
 
         if (step + 1) % EVAL_INTERNAL == 0:
             train_rec_value, train_prec_value = utils.evaluate(run_items[2],run_items[3])
+            print(
+                "=> STEP %10d [TRAIN]:\trecall:%7.4f \tprecision:%7.4f" % (step + 1, train_rec_value, train_prec_value))
 
         writer_train.add_summary(run_items[1], global_step=step)
         writer_train.flush()  # flushes the event file to disk
         if (step + 1) % SAVE_INTERNAL == 0: saver.save(sess, save_path=os.path.join(SAVE_PATH,'model.ckpt'), global_step=step + 1)
 
-        print("=> STEP %10d [TRAIN]:\tloss_xy:%7.4f \tloss_wh:%7.4f \tloss_conf:%7.4f \tloss_class:%7.4f"
+        if (step+1) % 10 ==0:
+            print("=> STEP %10d [TRAIN]:\tloss_xy:%7.4f \tloss_wh:%7.4f \tloss_conf:%7.4f \tloss_class:%7.4f"
               % (step + 1, run_items[5], run_items[6], run_items[7], run_items[8]))
 
-training()
+# training()
+test()

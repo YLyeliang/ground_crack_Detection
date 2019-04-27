@@ -146,7 +146,7 @@ class yolov3(object):
 
         box_centers, box_sizes, conf_logits, prob_logits = tf.split(feature_map, [2, 2, 1, self.NUM_CLASSES],
                                                                     axis=-1)  # e.m.box_centers [N,H,W,num_anchors,2]
-        box_centers = tf.nn.sigmoid(box_centers)
+        box_centers = tf.nn.sigmoid(box_centers)        # (1+e^(-a))^-1
 
         # design a offset matrix
         grid_x = tf.range(grid_size[1], dtype=tf.int32)  # x shape(w,)
@@ -162,7 +162,7 @@ class yolov3(object):
         box_centers = box_centers + x_y_offset  # predicted centers + the grid offset
         box_centers = box_centers * stride[::-1]  # rescale to original scale
 
-        box_sizes = tf.exp(box_sizes) * anchors  # anchors ->[w,h]
+        box_sizes = tf.exp(box_sizes) * anchors  # anchors ->[w,h] exp(box sizes) * anchors
         boxes = tf.concat([box_centers, box_sizes], axis=-1)
         return x_y_offset, boxes, conf_logits, prob_logits
 
@@ -239,7 +239,7 @@ class yolov3(object):
         grid_size = tf.shape(feature_map_i)[1:3]
         grid_size_ = feature_map_i.shape.as_list()[1:3]
 
-        y_true = tf.reshape(y_true, [-1, grid_size[0], grid_size[1], 3, 5 + self.NUM_CLASSES])
+        y_true = tf.reshape(y_true, [-1, grid_size_[0], grid_size_[1], 3, 5 + self.NUM_CLASSES])
 
         # downscale ratio in height and width
         ratio = tf.cast(self.img_size / grid_size, tf.float32)
@@ -316,7 +316,7 @@ class yolov3(object):
 
     def iou(self, true_box_xy, true_box_wh, pred_box_xy, pred_box_wh):
         """
-        calculate the ios matrix between ground truth true boxes and the predicted boxes
+        calculate the iou matrix between ground truth true boxes and the predicted boxes
         note: only care about the size match
         """
         # shape:

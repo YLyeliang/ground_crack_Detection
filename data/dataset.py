@@ -129,37 +129,38 @@ class Parser(object):
         # Find best anchor for each true box
         best_anchor = np.argmax(iou, axis=-1)
 
-        for t,n in enumerate(best_anchor):
+        for t, n in enumerate(best_anchor):
             for l in range(num_layers):
                 if n not in anchor_mask[l]: continue
 
-                i = np.floor(gt_boxes[t,0]/self.image_w*grid_sizes[l][1].astype('int32'))       #center of the cell math: gt_box_xy * grid_wh/image_wh
-                j = np.floor(gt_boxes[t,1]/self.image_h*grid_sizes[l][0].astype('int32'))
+                i = np.floor(gt_boxes[t, 0] / self.image_w * grid_sizes[l][1]).astype(
+                    'int32')  # center of the cell math: gt_box_xy * grid_wh/image_wh
+                j = np.floor(gt_boxes[t, 1] / self.image_h * grid_sizes[l][0]).astype('int32')
 
-                k =anchor_mask[l].index(n)
-                c=gt_boxes[t,4].astype('int32')
+                k = anchor_mask[l].index(n)
+                c = gt_boxes[t, 4].astype('int32')
 
-                y_true[l][j,i,k,0:4] = gt_boxes[t,0:4]
-                y_true[l][j,i,k,4]=1.
-                y_true[l][j,i,j,5+c]=1.
-        return y_true_13,y_true_26,y_true_52
+                y_true[l][j, i, k, 0:4] = gt_boxes[t, 0:4]
+                y_true[l][j, i, k, 4] = 1.
+                y_true[l][j, i, k, 5 + c] = 1.
+        return y_true_13, y_true_26, y_true_52
 
-    def parser_example(self,serialized_example):
+    def parser_example(self, serialized_example):
         features = tf.parse_single_example(
             serialized_example,
-            features = {
-                'image': tf.FixedLenFeature([],dtype=tf.string),
-                'boxes': tf.FixedLenFeature([],dtype=tf.string),
+            features={
+                'image': tf.FixedLenFeature([], dtype=tf.string),
+                'boxes': tf.FixedLenFeature([], dtype=tf.string),
             }
         )
 
-        image = tf.image.decode_png(features['image'],channels=3)
-        image = tf.image.convert_image_dtype(image,tf.uint8)
+        image = tf.image.decode_png(features['image'], channels=3)
+        image = tf.image.convert_image_dtype(image, tf.uint8)
 
-        gt_boxes = tf.decode_raw(features['boxes'],tf.float32)
-        gt_boxes = tf.reshape(gt_boxes,shape=[-1,5])
+        gt_boxes = tf.decode_raw(features['boxes'], tf.float32)
+        gt_boxes = tf.reshape(gt_boxes, shape=[-1, 5])
 
-        return self.preprocess(image,gt_boxes)
+        return self.preprocess(image, gt_boxes)
 
 
 class dataset(object):
@@ -183,6 +184,5 @@ class dataset(object):
             self.TFRecordDataset = self.TFRecordDataset.shuffle(self.shuffle)
         self.TFRecordDataset = self.TFRecordDataset.batch(self.batch_size).prefetch(self.batch_size)
         self.iterator = self.TFRecordDataset.make_one_shot_iterator()
-
     def get_next(self):
         return self.iterator.get_next()
