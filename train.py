@@ -3,6 +3,8 @@ import os
 import tensorflow as tf
 from utility import utils,yolov3
 from data.dataset import dataset,Parser
+from PIL import Image
+import numpy as np
 sess=tf.Session()
 
 IMAGE_H, IMAGE_W = 416,416
@@ -37,7 +39,6 @@ def test():
         loss = model.comput_loss(pred_feature_map, y_true)
         y_pred = model.predict(pred_feature_map)
 
-
     # sess.run([tf.global_variables_initializer(), tf.local_variables_initializer()])
     saver = tf.train.Saver()
     saver.restore(sess,save_path="/home/yel/PycharmProjects/lab/model.ckpt-21000")
@@ -49,6 +50,10 @@ def test():
         test_rec_value, test_prec_value = utils.evaluate(run_items[0], run_items[1])
         print(
               "=>[TEST]:\trecall:%7.4f \tprecision:%7.4f" % (test_rec_value, test_prec_value))
+        # boxes,confs,probs = run_items[0]
+        # scores = confs *probs
+        # boxes, scores,labels = utils.nms(boxes,scores,num_classes=1)
+        # image = utils.draw_boxes(image,boxes,scores,labels,CLASSES,[IMAGE_H,IMAGE_W],show=True)
 
 def training():
     images, *y_true = example

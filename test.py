@@ -11,7 +11,7 @@ b=[]
 a=np.arange(10).reshape([10,1])
 c= a.sum(axis=-1)>5
 
-
+a=[1,2,3,4]
 for i in range(3):
     b += np.argmax(a, axis=-1).tolist()
 c =np.concatenate(b,axis=1)
