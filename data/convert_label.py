@@ -5,23 +5,34 @@
 import xml.etree.ElementTree as ET
 import argparse
 import os
-
+import random
+import cv2
 classes= ["crack"]
 
 parser =argparse.ArgumentParser()
-parser.add_argument("--train",default="/home/yel/data/Aerialgoaf/train")
-parser.add_argument("--test",default="/home/yel/data/Aerialgoaf/test")
-parser.add_argument("--txt_path",default="./")
+parser.add_argument("--train",default="/home/yel/data/Aerialgoaf/detection/train")
+parser.add_argument("--test",default="/home/yel/data/Aerialgoaf/detection/test")
+parser.add_argument("--txt_path",default="/home/yel/data/Aerialgoaf/detection")
 flags=parser.parse_args()
 
 sets=['train','test']
+
+def train_test_select(path):
+    list=os.listdir(path)
+    list.remove('train')
+    list.remove('test')
+    files=random.sample(list,39)
+    for i in files:
+        src_img=os.path.join(path,i)
+
+# def jpg_to_png(path):
 
 def conver_annotation(path,txt_file):
     img_list = os.listdir(path)
     for i in img_list:
         if 'xml' not in i:
             continue
-        img_path=i.split(".")[0]+".png"
+        img_path="haze"+'/'+ i.split(".")[0]+".png"
         txt_file.write(os.path.join(path,img_path))     #write image_path
         tree = ET.parse(os.path.join(path, i))
         root = tree.getroot()

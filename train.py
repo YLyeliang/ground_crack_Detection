@@ -13,16 +13,16 @@ STEPS = 30000
 LR = 0.0001
 DECAY_STEP = 1000
 DECAY_RATE =0.9
-SHUFFLE_SIZE = 100
+SHUFFLE_SIZE = 80
 CLASSES = {0:'crack'}
 ANCHORS = utils.get_anchors('./data/anchors.txt',IMAGE_H,IMAGE_W)
 NUM_CLASSES = len(CLASSES)
 EVAL_INTERNAL = 100
 SAVE_INTERNAL =1000
-SAVE_PATH="/home/yel/PycharmProjects/lab/"
-
-train_rfrecord = "/home/yel/data/Aerialgoaf/train.tfrecords"
-test_tfrecord = "/home/yel/data/Aerialgoaf/test.tfrecords"
+SAVE_PATH="/home/yel/PycharmProjects/lab/20190505"
+FINETUNE_CKPT="/home/yel/PycharmProjects/lab/20190505/model.ckpt-3000"
+train_rfrecord = "/home/yel/data/Aerialgoaf/detection/train.tfrecords"
+test_tfrecord = "/home/yel/data/Aerialgoaf/detection/test.tfrecords"
 
 parser = Parser(IMAGE_H, IMAGE_W, ANCHORS, NUM_CLASSES)
 trainset = dataset(parser, train_rfrecord, BATCH_SIZE, shuffle=SHUFFLE_SIZE)
@@ -55,7 +55,7 @@ def test():
         # boxes, scores,labels = utils.nms(boxes,scores,num_classes=1)
         # image = utils.draw_boxes(image,boxes,scores,labels,CLASSES,[IMAGE_H,IMAGE_W],show=True)
 
-def training():
+def training(is_finetune=False):
     images, *y_true = example
     model = yolov3.yolov3(NUM_CLASSES, ANCHORS)
     with tf.variable_scope("yolov3"):
@@ -68,9 +68,11 @@ def training():
     tf.summary.scalar("loss/confs_loss", loss[3])
     tf.summary.scalar("loss/class_loss", loss[4])
 
-    global_step = tf.Variable(0, trainable=False, collections=[tf.GraphKeys.LOCAL_VARIABLES])
+    startstep=0 if not is_finetune else int(FINETUNE_CKPT.split('-')[-1])
+
+    global_step = tf.Variable(0, trainable=False,collections=[tf.GraphKeys.LOCAL_VARIABLES])
     write_op = tf.summary.merge_all()
-    writer_train = tf.summary.FileWriter("./data/train")
+    writer_train = tf.summary.FileWriter("./data/train/20190505")
 
     # update_vars = tf.contrib.framework.get_variables_to_restore(include=["yolov3/yolo-v3"])
     learning_rate = tf.train.exponential_decay(LR, global_step, DECAY_STEP, DECAY_RATE, staircase=True)
@@ -81,11 +83,15 @@ def training():
     with tf.control_dependencies(update_ops):
         train_op = optimizer.minimize(loss[0],global_step=global_step)
 
-    sess.run([tf.global_variables_initializer(), tf.local_variables_initializer()])
-    # saver_to_restore.restore(sess, "./checkpoint/yolov3.ckpt")
     saver = tf.train.Saver(max_to_keep=3)
+    if is_finetune==True:
+        sess.run([tf.local_variables_initializer()])
+        saver.restore(sess,FINETUNE_CKPT)
+    else:
+        sess.run([tf.global_variables_initializer(),tf.local_variables_initializer()])
+    # saver_to_restore.restore(sess, "./checkpoint/yolov3.ckpt")
 
-    for step in range(STEPS):
+    for step in range(startstep,startstep+STEPS):
         run_items = sess.run([train_op, write_op, y_pred, y_true] + loss, feed_dict={is_training: True})
 
         if (step + 1) % EVAL_INTERNAL == 0:
@@ -101,5 +107,5 @@ def training():
             print("=> STEP %10d [TRAIN]:\tloss_xy:%7.4f \tloss_wh:%7.4f \tloss_conf:%7.4f \tloss_class:%7.4f"
               % (step + 1, run_items[5], run_items[6], run_items[7], run_items[8]))
 
-# training()
-test()
+training(is_finetune=True)
+# test()

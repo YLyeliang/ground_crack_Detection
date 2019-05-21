@@ -131,10 +131,17 @@ class yolov3(object):
             return feature_map_1, feature_map_2, feature_map_3
 
     def reorg_layer(self, feature_map, anchors):
-        """reorganize feature map from final layers
+        """reorganize feature map from final layers,
+        before reorganize,the feature map have the shape of [N,H,W,3*(num_CLASS+5)],
+        where coordinates like center_x only means center,without relative length.
+        after reorganize, 4 tensor will return as results.
+        where coordinates in boxes tensor have the relative length,like center_x, it will
+        have the value offset+/sigmoid(center_x(old)),and rescaled to original size.So eventually it
+        become ratio*(offset+center_xy).
+        width and height are become exp(h,w)*anchors
         :return
         x_y_offset: a meshgrid of offset corresponding to final grid.
-        boxes: [N,H,W,num_anchors,4(x_centers,y_centers,w,h)]
+        boxes: [N,H,W,num_anchors,4(x_centers,y_centers,w,h)],these coordinates
 
         """
         num_anchors = len(anchors)  # num_anchors=3
@@ -178,7 +185,7 @@ class yolov3(object):
         """
         Note: compute the receptive field and get boxes,confs and class_probs
         given feature_maps
-        feature_maps -> [None, 13, 13, 3*(4+1+num_class)],
+        feature_maps -> [None, 13, 13, 3*(4+1+num_class)],      [None,h,w,3*(4+1+num_class)]
                         [None, 26, 26, 255],
                         [None, 52, 52, 255],
         :return
@@ -219,6 +226,7 @@ class yolov3(object):
         """Note: compute the loss
         Arguments:y_pred, list -> [feature_map_1, feature_map_2, feature_map_3]
                                         the shape of [None, 13, 13, 3*(NUM_CLASS+5)], etc
+                y_true, same shape as y_pred.
         """
         loss_xy, loss_wh, loss_conf, loss_class = 0., 0., 0., 0.,
         total_loss = 0.
@@ -235,6 +243,12 @@ class yolov3(object):
         return [total_loss, loss_xy, loss_wh, loss_conf, loss_class]
 
     def loss_layer(self, feature_map_i, y_true, anchors):
+        """
+        :param feature_map_i: shape [N,H,W,3*(NUM_CLASS+5)]
+        :param y_true: same shape as feature_map_i
+        :param anchors: you know that
+        :return:
+        """
         # size in [h,w] format ! don't get messed up
         grid_size = tf.shape(feature_map_i)[1:3]
         grid_size_ = feature_map_i.shape.as_list()[1:3]

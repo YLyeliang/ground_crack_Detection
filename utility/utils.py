@@ -51,17 +51,6 @@ def py_nms(boxes, scores, max_boxes=50, iou_thresh=0.5):
     x2 = boxes[:, 2]
     y2 = boxes[:, 3]
 
-    # x1 = np.maximum(0,boxes[:, 0])
-    # y1 = np.maximum(0,boxes[:, 1])
-    # x2 = np.maximum(0,boxes[:, 2])
-    # y2 = np.maximum(0,boxes[:, 3])
-    #
-    # x1 = np.minimum(416, x1)
-    # y1 = np.minimum(416, y1)
-    # x2 = np.minimum(416, x2)
-    # y2 = np.minimum(416, y2)
-
-
     areas = (x2 - x1 + 1) * (y2 - y1 + 1)
     order = scores.argsort()[::-1]  # from big to small
 

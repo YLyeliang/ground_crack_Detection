@@ -8,8 +8,8 @@ import os
 
 def main(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset_txt", default='../data/test.txt')
-    parser.add_argument("--tfrecord_path_prefix", default='/home/yel/data/Aerialgoaf/test')
+    parser.add_argument("--dataset_txt", default='./train.txt')
+    parser.add_argument("--tfrecord_path_prefix", default='/home/yel/data/Aerialgoaf/detection/train')
     flags = parser.parse_args()
 
     dataset ={}

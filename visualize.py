@@ -11,7 +11,7 @@ IMAGE_H, IMAGE_W = 416,416
 CLASSES = {0:'crack'}
 ANCHORS = utils.get_anchors('./data/anchors.txt',IMAGE_H,IMAGE_W)
 NUM_CLASSES = len(CLASSES)
-image_path= "/home/yel/data/Aerialgoaf/test"
+image_path= "/home/yel/data/Aerialgoaf/detection/test/haze"
 temp = os.listdir(image_path)
 files=[]
 for x in temp:
@@ -26,7 +26,7 @@ def test():
 
     # sess.run([tf.global_variables_initializer(), tf.local_variables_initializer()])
     saver = tf.train.Saver()
-    saver.restore(sess,save_path="/home/yel/PycharmProjects/lab/model.ckpt-19000")
+    saver.restore(sess,save_path="/home/yel/PycharmProjects/lab/20190505/model.ckpt-14000")
 
     for image in files:
         image =Image.open(os.path.join(image_path,image))
@@ -36,7 +36,7 @@ def test():
 
         boxes,confs,probs = run_items[0]
         scores = confs *probs
-        boxes, scores,labels = utils.nms(boxes,scores,num_classes=1,max_boxes=3,score_thresh=0.5,iou_thresh=0.2)
+        boxes, scores,labels = utils.nms(boxes,scores,num_classes=1,max_boxes=10,score_thresh=0.7,iou_thresh=0.1)
         img = utils.draw_boxes(image,boxes,scores,labels,CLASSES,[IMAGE_H,IMAGE_W],show=True)
 
 test()
